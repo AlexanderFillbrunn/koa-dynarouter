@@ -114,7 +114,7 @@ var router = dynarouter(Cat, {
 });
 ```
 
-**query:**:
+**query:**
 A query or scan object retrieved from the Dynamoose model by calling `model.query(<hashkeyname>)`or `model.scan()` and appending the modifiers as described in the [Dynamoose documentation](https://github.com/automategreen/dynamoose).
 
 **postAuthorize:**
