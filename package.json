@@ -1,0 +1,23 @@
+{
+  "name": "koa-dynarouter",
+  "version": "0.1.0",
+  "description": "Creates koa-routers for Dynamoose models",
+  "dependencies": {
+    "dynamoose": "^0.7.0",
+    "koa-jwt": "^2.2.2",
+    "koa-router": "^7.0.1",
+    "lodash": "^4.17.4"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "chai-as-promised": "^6.0.0",
+    "mocha": "^3.2.0",
+    "nyc": "^10.1.2",
+    "sinon": "^1.17.7"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Alexander Fillbrunn",
+  "license": "MIT"
+}
