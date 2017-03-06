@@ -230,7 +230,7 @@ See post, put and get for description of the other settings.
 
 ## TODOs
 
-[ ] Finish unit tests
-[ ] Batch putItem and deleteItem
-[ ] Support nested routers of the same model (currently parameter names clash)
-[ ] Example App
+- [ ] Finish unit tests
+- [ ] Batch putItem and deleteItem
+- [ ] Support nested routers of the same model (currently parameter names clash)
+- [ ] Example App
