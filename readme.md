@@ -22,7 +22,7 @@ var catSchema = new dynamoose.Schema({
   age: Number
 });
 
-var Cat = dynamoose.model('Cat', { id: Number, name: String });
+var Cat = dynamoose.model('Cat', catSchema);
 ```
 
 The code for creating a router that allows every operation:
