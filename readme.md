@@ -65,7 +65,7 @@ The key property is the key that is used to decode the token and optional indica
 Sometimes certain operations should be run in parallel while the request to DynamoDB runs. When a property named "parallel" is present in the settings for a method, it is expected to consist of two parts:
 
 - **actions:** a list of functions to execute in parallel
-- **merge:**: a function merging the result from DynamoDB with those from the parallel actions.
+- **merge:** a function merging the result from DynamoDB with those from the parallel actions.
 
 A common use case is the retrieval of additional data from another source and joining the two records. The following example additionally loads a cat's owner information using the Dynamoose model "Owner" and appends it as property "owner" to the cat.
 
