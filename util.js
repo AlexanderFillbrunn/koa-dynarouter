@@ -128,8 +128,8 @@ function handleAuthorize(auth) {
 * @param  {function} authorize the user-defined function to use.
 * @return {undefined}
 */
-async function authorize(ctx, authorize) {
-    let auth = await authorize(ctx);
+async function authorize(ctx, authorizeFn) {
+    let auth = await authorizeFn(ctx);
     handleAuthorize(auth);
 }
 
