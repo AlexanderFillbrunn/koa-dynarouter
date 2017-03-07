@@ -99,8 +99,19 @@ describe('dynarouter', function () {
             });
         });
 
-        describe('execParallel', function () {
-            
+        describe('execParallel', async function() {
+            let p = Promise.resolve('a');
+            let parallel = {
+                actions: [
+                    (ctx) => 'b',
+                    (ctx) => 'c'
+                ],
+                merge: (ctx, res) => {
+                    return res.sort().join();
+                }
+            };
+            let res = await util.execParallel({}, p, parallel);
+            expect(res).to.equal('a,b,c');
         });
 
         describe('authorize', function () {
@@ -154,15 +165,9 @@ describe('dynarouter', function () {
 
             it('should apply the function to the $PUT, $ADD and $DELETE properties of the object', function() {
                 let obj = {
-                    $PUT: {
-                        a: 1
-                    },
-                    $ADD: {
-                        b: 2
-                    },
-                    $DELETE: {
-                        c: 3
-                    }
+                    $PUT: { a: 1 },
+                    $ADD: { b: 2 },
+                    $DELETE: { c: 3 }
                 };
                 
                 let res = util.applyProps(obj, d => Object.assign({}, d, {e: 4}));
