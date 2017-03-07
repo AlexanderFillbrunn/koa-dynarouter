@@ -92,7 +92,7 @@ function mergeOptions(local, global) {
 }
 
 /**
- * Asynchronously executes an action and, if present, other actions in parallel and merges their results.
+ * Resolves the promise and, if present, executes actions in parallel and merges their results.
 * @function execParallel
 * @param  {type} ctx      the koa context
 * @param  {function} action   the main action
@@ -101,8 +101,8 @@ function mergeOptions(local, global) {
 * @param  {function} [parallel.merge]   the function to merge the results
 * @return {any} the result of the merge operation or of the main action if no parallel actions are given
 */
-async function execParallel(ctx, action, parallel) {
-    let actions = [action];
+async function execParallel(ctx, promise, parallel) {
+    let actions = [promise];
     if (parallel) {
         actions = [...actions, ...parallel.actions.map(a => a(ctx))];
     }
