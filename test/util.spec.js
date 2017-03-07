@@ -5,6 +5,8 @@ const chaiAsPromised = require("chai-as-promised");
 
 const testModel = require('./testmodel.js');
 
+const AccessDeniedError = require('../errors/AccessDeniedError');
+
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
@@ -102,11 +104,72 @@ describe('dynarouter', function () {
         });
 
         describe('authorize', function () {
+            it('should throw an AccessDeniedError', async function() {
+                let spy = sinon.spy(function(ctx) {
+                    return Promise.resolve(false);
+                });
+                return expect(util.authorize('ctx', spy)).to.eventually.be.rejectedWith(AccessDeniedError)
+                .then(() => {
+                    expect(spy.calledOnce).to.be.true;
+                    expect(spy.firstCall.args[0]).to.equal('ctx');
+                });
+            });
 
+            it('should throw an AccessDeniedError', async function() {
+                let spy = sinon.spy(function(ctx) {
+                    return new Error('test');
+                });
+                return expect(util.authorize('ctx', spy)).to.eventually.be.rejectedWith(AccessDeniedError)
+                .then(() => {
+                    expect(spy.calledOnce).to.be.true;
+                    expect(spy.firstCall.args[0]).to.equal('ctx');
+                });
+            });
+
+            it('should throw an AccessDeniedError with an error message', async function() {
+                let spy = sinon.spy(function(ctx) {
+                    return {
+                        pass: false,
+                        message: 'test'
+                    };
+                });
+                return expect(util.authorize('ctx', spy)).to.eventually.be.rejectedWith(AccessDeniedError)
+                .then(() => {
+                    // TODO: How to check error message?
+                    expect(spy.calledOnce).to.be.true;
+                    expect(spy.firstCall.args[0]).to.equal('ctx');
+                });
+            });
         });
 
-        describe('postAuthorize', function () {
+        describe('applyProps', function () {
+            it('should apply the function to the object', function() {
+                let obj = {
+                    a: 1,
+                    b: 2
+                };
+                let res = util.applyProps(obj, d => Object.assign({}, d, {c: 3}));
+                expect(res).to.have.property('c').which.is.equal(3);
+            });
 
+            it('should apply the function to the $PUT, $ADD and $DELETE properties of the object', function() {
+                let obj = {
+                    $PUT: {
+                        a: 1
+                    },
+                    $ADD: {
+                        b: 2
+                    },
+                    $DELETE: {
+                        c: 3
+                    }
+                };
+                
+                let res = util.applyProps(obj, d => Object.assign({}, d, {e: 4}));
+                expect(res.$PUT).to.have.property('e').which.is.equal(4);
+                expect(res.$ADD).to.have.property('e').which.is.equal(4);
+                expect(res.$DELETE).to.have.property('e').which.is.equal(4);
+            });
         });
     });
 });
