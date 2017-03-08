@@ -39,7 +39,7 @@ var router = dynarouter(Cat, {
     patch: true     // PATCH /:cat_hash/:cat_range
 });
 ```
-**Please note:** PUT does not check if the resource really has the correct id. This has to be done manually in the transform hook.
+**Please note:** PUT does not check if the resource really has the id that matches the URL the PUT request is made against. This has to be done manually in the transform hook.
 
 ## Details
 
