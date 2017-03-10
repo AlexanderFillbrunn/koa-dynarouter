@@ -1,18 +1,17 @@
-const get = require('../methods/get');
+const get = require('../../methods/get');
 const chai = require('chai');
 const sinon = require('sinon');
 const _ = require('lodash');
-const dynamoose = require('dynamoose');
-const AccessDeniedError = require('../errors/AccessDeniedError');
-const InternalServerError = require('../errors/InternalServerError');
-const NotFoundError = require('../errors/NotFoundError');
+const AccessDeniedError = require('../../errors/AccessDeniedError');
+const InternalServerError = require('../../errors/InternalServerError');
+const NotFoundError = require('../../errors/NotFoundError');
 const chaiAsPromised = require("chai-as-promised");
-const tu = require('./testutil');
+const tu = require('../testutil');
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-const testModel = require('./testmodel.js');
+const testModel = require('../testmodel.js');
 
 const KEYS = {
     hashKey: 'hash',
@@ -36,20 +35,20 @@ function createMiddleware(options) {
 }
 
 function defaultStub() {
-    sinon.stub(dynamoose.ddb(), 'getItem', function (params, callback){
-        let res = Object.assign({}, testModel.getResponse);
-        if (params.AttributesToGet) {
-            res.Item = _.pick(res.Item, params.AttributesToGet);
+    sinon.stub(testModel.model, 'get', function(id, opt) {
+        let res = Object.assign({}, testModel.object);
+        if (opt.attributes) {
+            res = _.pick(res, opt.attributes);
         }
-        callback(null, res);
+        return Promise.resolve(new testModel.model(res));
     });
 }
 
 describe('dynarouter', function () {
     describe('get', function () {
         afterEach(function() {
-            if (typeof dynamoose.ddb().getItem.restore === 'function')
-                dynamoose.ddb().getItem.restore();
+            if (typeof testModel.model.get.restore === 'function')
+                testModel.model.get.restore();
         });
 
         it('should respond with an item instance', async function() {
@@ -82,70 +81,46 @@ describe('dynarouter', function () {
         it('should respond with an item instance where a property "a" is added', async function() {
             defaultStub();
             let middleware = createMiddleware({
-                after: (ctx, data) => Object.assign({}, data, {a: true})
+                after: (data, ctx) => Object.assign({}, data, {a: true})
             });
             let ctx = createContext();
             await middleware(ctx, () => {});
             expect(ctx.body.data).to.have.property('a').which.is.true;
         });
 
-/*        it('should throw an AccessDeniedError before getItem is called', async function() {
-            defaultStub();
-            let middleware = createMiddleware({
-                preAuthorize: (ctx, data) => false
-            });
-            let ctx = createContext();
-            
-            return expect(middleware(ctx, () => {})).to.be.rejectedWith(AccessDeniedError).then(() => {
-                expect(dynamoose.ddb().getItem.called).to.be.false;
-            });
-        });
-
-        it('should not throw an AccessDeniedError', async function() {
-            defaultStub();
-            let middleware = createMiddleware({
-                preAuthorize: (ctx, data) => true
-            });
-            let ctx = createContext();
-            
-            return expect(middleware(ctx, () => {})).to.not.be.rejectedWith(AccessDeniedError);
-        });*/
-
         it('should throw an AccessDeniedError after getItem is called', async function() {
             defaultStub();
             let middleware = createMiddleware({
-                postAuthorize: (ctx, data) => false
+                postAuthorize: (data, ctx) => false
             });
             let ctx = createContext();
             
             return expect(middleware(ctx, () => {})).to.be.rejectedWith(AccessDeniedError).then(() => {
-                expect(dynamoose.ddb().getItem.called).to.be.true;
+                expect(testModel.model.get.called).to.be.true;
             });
         });
 
         it('should not throw an AccessDeniedError after getItem is called', async function() {
             defaultStub();
             let middleware = createMiddleware({
-                postAuthorize: (ctx, data) => true
+                postAuthorize: (data, ctx) => true
             });
             let ctx = createContext();
             
             return expect(middleware(ctx, () => {})).to.not.be.rejectedWith(AccessDeniedError).then(() => {
-                expect(dynamoose.ddb().getItem.called).to.be.true;
+                expect(testModel.model.get.called).to.be.true;
             });
         });
 
         it('should throw an InternalServerError', async function() {
-            sinon.stub(dynamoose.ddb(), 'getItem').callsArg(1).withArgs(new Error(), null);
+            sinon.stub(testModel.model, 'get').returns(Promise.reject(new Error()));
             let middleware = createMiddleware({});
             let ctx = createContext();
             return expect(middleware(ctx, () => {})).to.be.rejectedWith(InternalServerError);
         });
 
         it('should throw a NotFoundError', async function() {
-            sinon.stub(dynamoose.ddb(), 'getItem', function (params, callback){
-                callback(null, {});
-            });
+            sinon.stub(testModel.model, 'get').returns(Promise.resolve(void 0));
             let middleware = createMiddleware({});
             let ctx = createContext();
             return expect(middleware(ctx, () => {})).to.be.rejectedWith(NotFoundError);

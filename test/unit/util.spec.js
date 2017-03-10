@@ -1,11 +1,11 @@
 const sinon = require('sinon');
-const util = require('../util');
+const util = require('../../util');
 const chai = require('chai');
 const chaiAsPromised = require("chai-as-promised");
 
-const testModel = require('./testmodel.js');
+const testModel = require('../testmodel.js');
 
-const AccessDeniedError = require('../errors/AccessDeniedError');
+const AccessDeniedError = require('../../errors/AccessDeniedError');
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -106,7 +106,7 @@ describe('dynarouter', function () {
                     (ctx) => 'b',
                     (ctx) => 'c'
                 ],
-                merge: (ctx, res) => {
+                merge: (res, ctx) => {
                     return res.sort().join();
                 }
             };

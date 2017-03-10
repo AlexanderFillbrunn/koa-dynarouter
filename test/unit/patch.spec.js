@@ -1,15 +1,14 @@
 const _ = require('lodash');
-const dynamoose = require('dynamoose');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 const sinon = require('sinon');
 
-const tu = require('./testutil');
-const testModel = require('./testmodel.js');
+const tu = require('../testutil');
+const testModel = require('../testmodel.js');
 
-const patch = require('../methods/patch');
-const AccessDeniedError = require('../errors/AccessDeniedError');
-const InternalServerError = require('../errors/InternalServerError');
+const patch = require('../../methods/patch');
+const AccessDeniedError = require('../../errors/AccessDeniedError');
+const InternalServerError = require('../../errors/InternalServerError');
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -37,12 +36,9 @@ function createMiddleware(options) {
 }
 
 function defaultStub() {
-    sinon.stub(dynamoose.ddb(), 'updateItem', function (params, callback){
-        callback(null, {
-            Attributes: Object.assign({}, testModel.getResponse.Item, {
-                sProperty: {S: 'newvalue'}
-            })
-        });
+
+    sinon.stub(testModel.model, 'update', function(id, updates) {
+        return Promise.resolve(Object.assign({}, testModel.object, updates.$PUT || updates));
     });
 }
 
@@ -50,8 +46,8 @@ describe('dynarouter', function () {
     describe('patch', function () {
 
         afterEach(function() {
-            if (typeof dynamoose.ddb().updateItem.restore === 'function')
-                dynamoose.ddb().updateItem.restore();
+            if (typeof testModel.model.update.restore === 'function')
+                testModel.model.update.restore();
         });
 
         it('should call updateItem and return the item that was updated', async function() {
@@ -73,7 +69,7 @@ describe('dynarouter', function () {
              defaultStub();
             
             let middleware = createMiddleware({
-                after: (ctx, data) => Object.assign({}, data, {test: true})
+                after: (data, ctx) => Object.assign({}, data, {test: true})
             });
             let ctx = createContext();
             ctx.request.body = {
@@ -86,34 +82,11 @@ describe('dynarouter', function () {
             });
         });
 
-/*        it('should throw an AccessDeniedError before updateItem is called', async function() {
+        it('should add an update to nProperty to the patch', async function() {
             defaultStub();
             
             let middleware = createMiddleware({
-                preAuthorize: (ctx) => false
-            });
-            let ctx = createContext();
-            ctx.request.body = {
-                sProperty: 'newvalue'
-            };
-
-            return expect(middleware(ctx, () => {})).to.be.rejectedWith(AccessDeniedError).then(()=>{
-                expect(dynamoose.ddb().updateItem.called).to.be.false;
-            });
-        });*/
-
-        it('should add an update to nProperty to the patch', async function() {
-            sinon.stub(dynamoose.ddb(), 'updateItem', function (params, callback){
-                callback(null, {
-                    Attributes: Object.assign({}, testModel.getResponse.Item, {
-                        sProperty: {S: 'newvalue'},
-                        nProperty: {N: '5'}
-                    })
-                });
-            });
-            
-            let middleware = createMiddleware({
-                transform: (ctx, data) => Object.assign({}, data, {nProperty: 5})
+                transform: (data, ctx) => Object.assign({}, data, {nProperty: 5})
             });
             let ctx = createContext();
             ctx.request.body = {
@@ -125,15 +98,10 @@ describe('dynarouter', function () {
                 success: true,
                 data: Object.assign({}, testModel.object, ctx.request.body, {nProperty: 5})
             });
-            expect(dynamoose.ddb().updateItem.called).to.be.true;
         });
 
         it('should filter out the update for property "sProperty"', async function() {
-            sinon.stub(dynamoose.ddb(), 'updateItem', function (params, callback){
-                callback(null, {
-                    Attributes: Object.assign({}, testModel.getResponse.Item, {nProperty: {N: '5'}})
-                });
-            });
+            defaultStub();
             
             let middleware = createMiddleware({
                 forbiddenProperties: ['sProperty']
@@ -149,15 +117,10 @@ describe('dynarouter', function () {
                 success: true,
                 data: Object.assign({}, testModel.object, _.omit(ctx.request.body, 'sProperty'))
             });
-            expect(dynamoose.ddb().updateItem.called).to.be.true;
         });
 
         it('should filter out the updates for all properties but the property "sProperty"', async function() {
-            sinon.stub(dynamoose.ddb(), 'updateItem', function (params, callback){
-                callback(null, {
-                    Attributes: Object.assign({}, testModel.getResponse.Item, {sProperty: {S: 'newvalue'}})
-                });
-            });
+            defaultStub();
             
             let middleware = createMiddleware({
                 allowedProperties: ['sProperty']
@@ -173,11 +136,10 @@ describe('dynarouter', function () {
                 success: true,
                 data: Object.assign({}, testModel.object, _.pick(ctx.request.body, 'sProperty'))
             });
-            expect(dynamoose.ddb().updateItem.called).to.be.true;
         });
 
         it('should throw an InternalServerError', async function() {
-            sinon.stub(dynamoose.ddb(), 'updateItem').callsArg(1).withArgs(new Error(), null);
+            sinon.stub(testModel.model, 'update').returns(Promise.reject(new Error()));
             
             let middleware = createMiddleware({});
             let ctx = createContext();

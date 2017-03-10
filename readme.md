@@ -76,7 +76,7 @@ var router = dynarouter(Cat, {
             actions: [
                 (ctx) => Owner.get({id: ctx.params.cat_hash})
             ],
-            merge: (ctx, getRes, pRes) => Object.assign(getRes, {owner: pRes[0]})
+            merge: (res, ctx) => Object.assign(res[0], {owner: res[1]})
         }
     }
 }
@@ -94,9 +94,9 @@ var router = dynarouter(Cat, {
         // Only get two attributes
         attributes: ['name', 'color'],
         // Only admins are allowed to see pink cats
-        postAuthorize: (ctx, cat) => cat.color !== 'pink' || ctx.state.user.isAdmin,
-        // We only need a descriptive string, not the full data
-        after: (ctx, cat) => `${cat.name} (${cat.color})`
+        postAuthorize: (cat, ctx) => cat.color !== 'pink' || ctx.state.user.isAdmin,
+        // We only need a descriptive string, not the full data. ctx could be omitted.
+        after: (cat, ctx) => `${cat.name} (${cat.color})`
     }
 });
 ```
@@ -108,10 +108,10 @@ If the hash key should not be part of the URL, this setting indicates how the ha
 Either a function returning an array (or a promise resolving to an array) or a simple array of property names to return.
 
 **postAuthorize:**
-Like authorize, but as a second argument the retrieved data is available to the authorization function.
+Like authorize, but as the first argument the retrieved data is available to the authorization function.
 
 **after:**
-A simple mapping function applied to the data. Can either return the transformed data directly or as a promise, which is resolved by koa-dynarouter. Has access to the koa context and the data.
+A simple mapping function applied to the data. Can either return the transformed data directly or as a promise, which is resolved by koa-dynarouter. Has access to the data and the koa context.
 
 ### query
 
@@ -122,14 +122,14 @@ var router = dynarouter(Cat, {
         authorize: (ctx) => true,
         // Only cats of current user are returned.
         // See https://github.com/automategreen/dynamoose
-        query: (ctx, model) => model.query('ownerId').eq(ctx.state.user.id),
+        query: (model, ctx) => model.query('ownerId').eq(ctx.state.user.id),
 		// Here we could potentially inspect the list of cats
 		// and decide if the user is allowed to see it.
-        postAuthorize: (ctx, cats) => true,
+        postAuthorize: (cats, ctx) => true,
         // Filter out cats with age > 10 (we could have done that in DynamoDB, too)
-        filter: (ctx, cat) => cat.age <= 10,
+        filter: (cat, idx, ctx) => cat.age <= 10,
         // Add a property indicating whether cat belongs to current user
-        map: (ctx, cat) => Object.assign(cat,
+        map: (cat, idx, ctx) => Object.assign(cat,
 					        {isOwnerOf: cat.ownerId === ctx.state.user.id})
     }
 });
@@ -142,10 +142,10 @@ A query or scan object retrieved from the Dynamoose model by calling `model.quer
 Like authorize but also receives the data that was loaded from DynamoDB.
 
 **filter:**
-A function for filtering the result. Receives the koa context and an item as arguments and should return a boolean.
+A function for filtering the result. Receives the item, the index and the koa context as arguments and should return a boolean.
 
 **map:**
-A function mapping items. Receives the koa context and an item as arguments and should return a new item.
+A function mapping items. Receives the item, the index and the koa context as arguments and should return a new item.
 
 ### post
 
@@ -155,11 +155,11 @@ var router = dynarouter(Cat, {
         // Only admins are allowed to create new cats
         authorize: (ctx) => ctx.state.user.isAdmin,
         // The cat's owner is the current user
-        transform: (ctx, cat) => Object.assign(cat, {ownerId: ctx.state.user.id}),
+        transform: (cat, ctx) => Object.assign(cat, {ownerId: ctx.state.user.id}),
         // Existing cat with same name and owner is overwritten (default: false)
         overwrite: true,
         // We only need the cat's name returned
-        after: (ctx, cat) => cat.name,
+        after: (cat, ctx) => cat.name,
     }
 });
 ```
@@ -183,13 +183,13 @@ var router = dynarouter(Cat, {
 	    // The cat's hash key is retrieved from a dynarouter this router is nested in
         hashKey: (ctx) => ctx.params.owner_hash,
         // Make sure the cat has the properties which the URL indicates
-        transform: (ctx, cat) =>
+        transform: (cat, ctx) =>
 	        Object.assign(cat, {ownerId: parseInt(ctx.params.cat_hash),
 						        name: ctx.params.cat_range}),
         // Existing cat with same name and owner is overwritten (default: false)
         overwrite: true,
         // We only need the cat's name returned
-        after: (ctx, cat) => cat.name,
+        after: (cat, ctx) => cat.name,
     }
 });
 ```
@@ -210,10 +210,10 @@ var router = dynarouter(Cat, {
         // Alternatively: Forbid the ownerId and name to be changed
         forbiddenProperties: ['ownerId', 'name'],
         // Change the color to include the suffix " (changed)"
-        transform: (ctx, cat) => Object.assign(cat,
+        transform: (cat, ctx) => Object.assign(cat,
 							        {color: cat.color + ' (changed)'}),
         // We only need the cat's name. Otherwise all properties are returned.
-        after: (ctx, cat) => cat.name
+        after: (cat, ctx) => cat.name
     }
 });
 ```
@@ -239,7 +239,7 @@ var router = dynarouter(Cat, {
         // If false, only the deleted key is returned.
         update: true,
         // We only need the deleted cat's name. Otherwise all properties are returned.
-        after: (ctx, cat) => cat.name
+        after: (cat, ctx) => cat.name
     }
 });
 ```

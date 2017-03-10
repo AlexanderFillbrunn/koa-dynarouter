@@ -1,17 +1,16 @@
-const del = require('../methods/del');
+const del = require('../../methods/del');
 const chai = require('chai');
 const sinon = require('sinon');
 const _ = require('lodash');
-const dynamoose = require('dynamoose');
-const AccessDeniedError = require('../errors/AccessDeniedError');
-const InternalServerError = require('../errors/InternalServerError');
+const AccessDeniedError = require('../../errors/AccessDeniedError');
+const InternalServerError = require('../../errors/InternalServerError');
 const chaiAsPromised = require("chai-as-promised");
-const tu = require('./testutil');
+const tu = require('../testutil');
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-const testModel = require('./testmodel.js');
+const testModel = require('../testmodel.js');
 
 function createContext() {
     return {
@@ -35,22 +34,20 @@ function createMiddleware(options) {
 }
 
 function defaultStub() {
-    sinon.stub(dynamoose.ddb(), 'deleteItem', function (params, callback){
-        let res = Object.assign({}, testModel.getResponse);
-        res.Attributes = Object.assign({}, res.Item);
-        delete res.Item;
-        if (params.ReturnValues !== 'ALL_OLD') {
-            res = _.pick(res, 'hash', 'range');
-        }
-        callback(null, res);
+    sinon.stub(testModel.model, 'delete', function(key, opt) {
+        let res = Object.assign({}, testModel.object);
+        if (opt.update) {
+            return Promise.resolve(res);
+        } else
+            return Promise.resolve(_.pick(res, 'hash', 'range'))
     });
 }
 
 describe('dynarouter', function () {
     describe('del', function () {
         afterEach(function() {
-            if (typeof dynamoose.ddb().deleteItem.restore === 'function')
-                dynamoose.ddb().deleteItem.restore();
+            if (typeof testModel.model.delete.restore === 'function')
+                testModel.model.delete.restore();
         });
 
         it('should respond with the deleted key', async function() {
@@ -62,7 +59,7 @@ describe('dynarouter', function () {
                 success: true,
                 data: _.pick(testModel.object, 'hash', 'range')
             });
-            expect(dynamoose.ddb().deleteItem.called).to.be.true;
+            testModel.model.delete.restore();
         });
 
         it('should respond with an item instance', async function() {
@@ -76,7 +73,6 @@ describe('dynarouter', function () {
                 success: true,
                 data: testModel.object
             });
-            expect(dynamoose.ddb().deleteItem.called).to.be.true;
         });
 
         it('should run another function in parallel and merge the output with the item', async function() {
@@ -88,7 +84,7 @@ describe('dynarouter', function () {
                         (ctx) => new Promise((resolve, reject) =>
                                     setTimeout(() => resolve('Parallel!'), 10))
                     ],
-                    merge: (ctx, results) => Object.assign(results[0], {parallel: results[1]})
+                    merge: (results, ctx) => Object.assign(results[0], {parallel: results[1]})
                 }
             });
             let ctx = createContext();
@@ -97,14 +93,13 @@ describe('dynarouter', function () {
                 success: true,
                 data: Object.assign({}, testModel.object, {parallel: 'Parallel!'})
             });
-            expect(dynamoose.ddb().deleteItem.called).to.be.true;
         });
 
         it('should respond with an item instance with added property "test"', async function() {
             defaultStub();
             let middleware = createMiddleware({
                 update: true,
-                after: (ctx, data) => Object.assign({}, data, {test: true})
+                after: (data, ctx) => Object.assign({}, data, {test: true})
             });
             let ctx = createContext();
             await middleware(ctx, () => {});
@@ -112,26 +107,12 @@ describe('dynarouter', function () {
                 success: true,
                 data: Object.assign({}, testModel.object, {test: true})
             });
-            expect(dynamoose.ddb().deleteItem.called).to.be.true;
         });
 
-        /*
-        it('should throw an AccessDeniedError before deleteItem is called', async function() {
-            defaultStub();
-            let middleware = createMiddleware({
-                preAuthorize: (ctx, data) => false
-            });
-            let ctx = createContext();
-            
-            return expect(middleware(ctx, () => {})).to.be.rejectedWith(AccessDeniedError).then(() => {
-                expect(dynamoose.ddb().deleteItem.called).to.be.false;
-            });
-        });*/
-
         it('should throw an InternalServerError', async function() {
-            sinon.stub(dynamoose.ddb(), 'deleteItem', (params, cb) => {
-                cb(new Error());
-            });//.callsArg(1).withArgs(new Error(), null);
+            sinon.stub(testModel.model, 'delete', function(key, opt) {
+                return Promise.reject(new Error());
+            });
             let middleware = createMiddleware({});
             let ctx = createContext();
             return expect(middleware(ctx, () => {})).to.be.rejectedWith(InternalServerError);

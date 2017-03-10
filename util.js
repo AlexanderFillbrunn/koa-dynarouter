@@ -107,7 +107,7 @@ async function execParallel(ctx, promise, parallel) {
         actions = [...actions, ...parallel.actions.map(a => a(ctx))];
     }
     let results = await Promise.all(actions);
-    return parallel ? parallel.merge(ctx, results) : results[0];
+    return parallel ? parallel.merge(results, ctx) : results[0];
 }
 
 function handleAuthorize(auth) {
@@ -145,7 +145,7 @@ async function authorize(ctx, authorizeFn) {
 */
 async function postAuthorize(ctx, data, options) {
     if (options.postAuthorize) {
-        let auth = await options.postAuthorize(ctx, data);
+        let auth = await options.postAuthorize(data, ctx);
         handleAuthorize(auth);
     }
 }

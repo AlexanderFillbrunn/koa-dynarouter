@@ -20,7 +20,7 @@ function createMiddleware(model, options, keys) {
         ctx.state.keys[name] = params;
 
         // Transform patch
-        let d = options.transform ? await options.transform(ctx, data) : data;
+        let d = options.transform ? await options.transform(data, ctx) : data;
 
         // Filter properties based on whitelist or blacklist
         if (options.allowedProperties) {
@@ -34,13 +34,13 @@ function createMiddleware(model, options, keys) {
 
         // Perform DB update
         try {
-            result = await util.execParallel(ctx, model.update(params, data), options.parallel);
+            result = await util.execParallel(ctx, model.update(params, d), options.parallel);
         } catch(e) {
             throw new InternalServerError('Resource could not be updated', e);
         }
 
         if (options.after) {
-            let after = await options.after(ctx, result);
+            let after = await options.after(result, ctx);
             if (typeof after !== 'undefined') {
                 result = after;
             }

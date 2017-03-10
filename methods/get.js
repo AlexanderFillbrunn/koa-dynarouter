@@ -35,7 +35,7 @@ function createMiddleware(model, options, keys) {
         await util.postAuthorize(ctx, result, options);
 
         if (options.after) {
-            result = await options.after(ctx, result);
+            result = await options.after(result, ctx);
         }
         
         ctx.body = {

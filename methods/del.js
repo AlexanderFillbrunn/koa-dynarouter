@@ -29,7 +29,7 @@ function createMiddleware(model, options, keys) {
         }
 
         if (options.after) {
-            let after = await options.after(ctx, result);
+            let after = await options.after(result, ctx);
             if (typeof after !== 'undefined') {
                 result = after;
             }

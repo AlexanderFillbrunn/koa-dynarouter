@@ -1,16 +1,15 @@
 const _ = require('lodash');
-const post = require('../methods/post');
-const dynamoose = require('dynamoose');
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 const sinon = require('sinon');
 
-const tu = require('./testutil');
-const testModel = require('./testmodel.js');
+const tu = require('../testutil');
+const testModel = require('../testmodel.js');
 
-const AccessDeniedError = require('../errors/AccessDeniedError');
-const InternalServerError = require('../errors/InternalServerError');
-const ItemExistsError = require('../errors/ItemExistsError');
+const put = require('../../methods/put');
+const AccessDeniedError = require('../../errors/AccessDeniedError');
+const InternalServerError = require('../../errors/InternalServerError');
+const ItemExistsError = require('../../errors/ItemExistsError');
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
@@ -25,27 +24,30 @@ function createContext() {
     };
 }
 
+const KEYS = {
+    hashKey: 'hash',
+    rangeKey: 'range'
+};
+
 function createMiddleware(options) {
-    return post(testModel.model, options, {});
+    return put(testModel.model, options, KEYS);
 }
 
 function defaultStub() {
-    sinon.stub(dynamoose.ddb(), 'putItem', function (params, callback){
-        callback(null, {
-            attributes: params.Item
-        });
+    sinon.stub(testModel.model, 'create', function (data){
+        return Promise.resolve(data);
     });
 }
 
 describe('dynarouter', function () {
-    describe('post', function () {
-        
-        afterEach(() => {
-            if (typeof dynamoose.ddb().putItem.restore === 'function')
-                dynamoose.ddb().putItem.restore();
+    describe('put', function () {
+
+        afterEach(function() {
+            if (typeof testModel.model.create.restore === 'function')
+                testModel.model.create.restore();
         });
 
-        it('should return the item that was added to the database', async function() {
+        it('should return the item that was added to the database and call putItem', async function() {
             defaultStub();
             let middleware = createMiddleware({});
             let ctx = createContext();
@@ -55,12 +57,13 @@ describe('dynarouter', function () {
                 success: true,
                 data: testModel.object
             });
+            expect(testModel.model.create.calledOnce).to.be.true;
         });
 
         it('should set hash to "test" before adding item to database', async function() {
             defaultStub();
             let middleware = createMiddleware({
-                transform: (ctx, data) => Object.assign({}, data, {hash: 'test'})
+                transform: (data, ctx) => Object.assign({}, data, {hash: 'test'})
             });
             let ctx = createContext();
             ctx.request.body = testModel.object;
@@ -69,13 +72,13 @@ describe('dynarouter', function () {
                 success: true,
                 data: Object.assign({}, testModel.object, {hash: 'test'})
             });
-            expect(dynamoose.ddb().putItem.firstCall.args[0].Item.hash.S).to.equal('test');
+            expect(testModel.model.create.firstCall.args[0].hash).to.equal('test');
         });
 
         it('should add a property "test" to the return value', async function() {
             defaultStub();
             let middleware = createMiddleware({
-                after: (ctx, data) => Object.assign({}, data, {test: true})
+                after: (data, ctx) => Object.assign({}, data, {test: true})
             });
             let ctx = createContext();
             ctx.request.body = testModel.object;
@@ -84,22 +87,20 @@ describe('dynarouter', function () {
                 success: true,
                 data: Object.assign({}, testModel.object, {test: true})
             });
-            expect(dynamoose.ddb().putItem.firstCall.args[0].Item.test).to.not.exist;
+            expect(testModel.model.create.firstCall.args[0].test).to.not.exist;
         });
 
         it('should throw an InternalServerError', async function() {
-            sinon.stub(dynamoose.ddb(), 'putItem').callsArg(1).withArgs(new Error(), null);
+            sinon.stub(testModel.model, 'create').returns(Promise.reject(new Error()));
             let middleware = createMiddleware({});
             let ctx = createContext();
             return expect(middleware(ctx, () => {})).to.be.rejectedWith(InternalServerError);
         });
 
         it('should throw an ItemExistsError', async function() {
-            sinon.stub(dynamoose.ddb(), 'putItem', function(param, cb) {
-                let error = new Error();
-                error.name = 'ConditionalCheckFailedException';
-                cb(error);
-            });
+            let error = new Error();
+            error.name = 'ConditionalCheckFailedException';
+            sinon.stub(testModel.model, 'create').returns(Promise.reject(error));
             
             let middleware = createMiddleware({
                 overwrite: false
@@ -110,5 +111,3 @@ describe('dynarouter', function () {
         });
     });
 });
-
-

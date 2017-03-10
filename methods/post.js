@@ -13,7 +13,7 @@ function createMiddleware(model, options, keys) {
 
         // Transform data
         if (options.transform) {
-            data = await options.transform(ctx, data);
+            data = await options.transform(data, ctx);
         }
         try {
             result = await util.execParallel(ctx,
@@ -27,7 +27,7 @@ function createMiddleware(model, options, keys) {
         }
 
         if (options.after) {
-            let after = await options.after(ctx, result);
+            let after = await options.after(result, ctx);
             if (typeof after !== 'undefined') {
                 result = after;
             }
