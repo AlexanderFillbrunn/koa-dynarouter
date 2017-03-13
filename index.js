@@ -41,7 +41,7 @@ module.exports = function (model, options) {
             let middleware = [...createBeforeMiddleware(model, opts),
                 m.factory(model, opts, keys)];
             // Path for the router
-            let path = m.detailPath ? '/' : getPath(name, keys, opts);
+            let path = m.detailPath ? getPath(name, keys, opts) : '/';
             // Register route
             router[m.method || method].apply(router, [path, ...middleware]);
         }
