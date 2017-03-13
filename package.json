@@ -16,6 +16,9 @@
   "devDependencies": {
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
+    "koa": "^2.0.0-alpha.8",
+    "koa-bodyparser": "^3.2.0",
+    "koa-router": "^7.0.1",
     "mocha": "^3.2.0",
     "nyc": "^10.1.2",
     "sinon": "^1.17.7",
