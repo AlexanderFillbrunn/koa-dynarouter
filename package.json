@@ -1,6 +1,11 @@
 {
   "name": "koa-dynarouter",
   "version": "0.1.0",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AlexanderFillbrunn/koa-dynarouter.git"
+  },
   "description": "Creates koa-routers for Dynamoose models",
   "dependencies": {
     "dynamoose": "^0.7.0",
