@@ -72,7 +72,7 @@ function createBeforeMiddleware(models, options) {
     // Check if user is allowed to perform operation/query
     if (options.authorize) {
         middleware.push(async (ctx, next) => {
-            util.authorize(ctx, options.authorize);
+            await util.authorize(ctx, options.authorize);
             await next();
         });
     }
