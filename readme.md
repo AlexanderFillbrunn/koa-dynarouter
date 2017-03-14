@@ -31,6 +31,11 @@ The code for creating a router that allows every operation:
 const dynarouter = require('koa-dynarouter');
 
 var router = dynarouter(Cat, {
+    globals: {
+        // Use JWT and only allow user with name "testuser" for all methods
+        jwt: 'yourjwtsecret',
+        authorize: (ctx) => ctx.state.user.name === 'testuser'
+    },
     get: true,      // GET /:cat_hash/:cat_range
     query: true,    // GET /
     post: true,     // POST /
@@ -44,7 +49,7 @@ var router = dynarouter(Cat, {
 ## Details
 
 Instead of simply setting the method to true, you can pass an options object with hooks and settings. Hooks and settings can also
-be defined on the top level of the settings object. They are then treated as defaults and are overwritten by properties in the settings for the individual methods.
+be defined on the top level of the settings object in a property called "globals". They are then treated as defaults and are overwritten by properties in the settings for the individual methods.
 
 ### all methods
 
